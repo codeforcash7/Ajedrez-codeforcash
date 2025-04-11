@@ -1,0 +1,664 @@
+html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajedrez - Mi Portafolio</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Playfair+Display:wght@700&display=swap">
+    <style>
+        :root {
+            --light-square: #f0d9b5;
+            --dark-square: #b58863;
+            --highlight: rgba(0, 255, 0, 0.3);
+            --move-hint: rgba(0, 0, 255, 0.3);
+            --check: rgba(255, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .chess-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            margin: 20px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            text-align: center;
+            color: #222;
+            margin-bottom: 20px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+
+        #turn-indicator span {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1/1;
+            margin: 0 auto;
+            border: 2px solid #555;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .square {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .square.light {
+            background-color: var(--light-square);
+        }
+
+        .square.dark {
+            background-color: var(--dark-square);
+        }
+
+        .square.highlight {
+            background-color: var(--highlight);
+        }
+
+        .square.move-hint {
+            background-color: var(--move-hint);
+        }
+
+        .square.check {
+            background-color: var(--check);
+        }
+
+        .piece {
+            font-size: 40px;
+            line-height: 1;
+            text-align: center;
+            user-select: none;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button, .rules-toggle, .ai-toggle {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2c3e50;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover, .rules-toggle:hover, .ai-toggle:hover {
+            background-color: #1a252f;
+        }
+
+        .ai-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-toggle input {
+            cursor: pointer;
+        }
+
+        .rules-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            margin-top: 20px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+            padding: 0 15px;
+        }
+
+        .rules-panel.show {
+            max-height: 500px;
+            padding: 15px;
+        }
+
+        .rules-panel h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .rules-panel ul {
+            padding-left: 20px;
+        }
+
+        .rules-panel li {
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .chess-container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .piece {
+                font-size: 30px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chess-container">
+        <h1>Ajedrez Interactivo</h1>
+        <div class="game-info">
+            <div id="turn-indicator">Turno: <span>Blancas</span></div>
+            <div id="game-status">Juego en progreso</div>
+        </div>
+        <div class="chessboard">
+            <div id="board"></div>
+        </div>
+        <div class="controls">
+            <button id="reset-btn">Reiniciar Juego</button>
+            <div class="rules-toggle" id="rules-btn">Mostrar Reglas</div>
+            <label class="ai-toggle">
+                <input type="checkbox" id="ai-toggle"> Jugar contra IA
+            </label>
+        </div>
+        <div class="rules-panel" id="rules-panel">
+            <h2>Reglas del Ajedrez</h2>
+            <ul>
+                <li><strong>Peón:</strong> Mueve hacia adelante una casilla, captura en diagonal. En su primer movimiento puede avanzar dos casillas.</li>
+                <li><strong>Torre:</strong> Mueve en línea recta horizontal o vertical cualquier número de casillas.</li>
+                <li><strong>Caballo:</strong> Mueve en forma de "L" (dos casillas en una dirección y luego una perpendicular).</li>
+                <li><strong>Alfil:</strong> Mueve en diagonal cualquier número de casillas.</li>
+                <li><strong>Reina:</strong> Combina los movimientos de torre y alfil.</li>
+                <li><strong>Rey:</strong> Mueve una casilla en cualquier dirección. No puede moverse a una casilla amenazada.</li>
+                <li><strong>Objetivo:</strong> Dar jaque mate al rey contrario.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elementos del DOM
+            const board = document.getElementById('board');
+            const turnIndicator = document.querySelector('#turn-indicator span');
+            const gameStatus = document.getElementById('game-status');
+            const resetBtn = document.getElementById('reset-btn');
+            const rulesBtn = document.getElementById('rules-btn');
+            const rulesPanel = document.getElementById('rules-panel');
+            const aiToggle = document.getElementById('ai-toggle');
+
+            // Estado del juego
+            let game = {
+                board: [],
+                turn: 'white',
+                selectedPiece: null,
+                validMoves: [],
+                check: false,
+                gameOver: false,
+                aiEnabled: false
+            };
+
+            // Función para obtener símbolo Unicode de la pieza
+            function getPieceSymbol(piece) {
+                const symbols = {
+                    'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+                    'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+                };
+                return symbols[piece] || '';
+            }
+
+            // Inicializar el tablero
+            function initializeBoard() {
+                game.board = [
+                    ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                    ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                    ['', '', '', '', '', '', '', ''],
+                    ['', '', '', '', '', '', '', ''],
+                    ['', '', '', '', '', '', '', ''],
+                    ['', '', '', '', '', '', '', ''],
+                    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+                ];
+                
+                game.turn = 'white';
+                game.selectedPiece = null;
+                game.validMoves = [];
+                game.check = false;
+                game.gameOver = false;
+                
+                updateTurnIndicator();
+                gameStatus.textContent = 'Juego en progreso';
+                renderBoard();
+            }
+
+            // Renderizar el tablero
+            function renderBoard() {
+                board.innerHTML = '';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                        square.dataset.row = row;
+                        square.dataset.col = col;
+                        
+                        // Resaltar casilla seleccionada
+                        if (game.selectedPiece && game.selectedPiece.row === row && game.selectedPiece.col === col) {
+                            square.classList.add('highlight');
+                        }
+                        
+                        // Resaltar movimientos válidos
+                        if (game.validMoves.some(move => move.row === row && move.col === col)) {
+                            square.classList.add('move-hint');
+                        }
+                        
+                        // Mostrar pieza
+                        const piece = game.board[row][col];
+                        if (piece) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = 'piece';
+                            pieceElement.textContent = getPieceSymbol(piece);
+                            pieceElement.style.color = piece === piece.toUpperCase() ? '#fff' : '#000';
+                            square.appendChild(pieceElement);
+                        }
+                        
+                        square.addEventListener('click', () => handleSquareClick(row, col));
+                        board.appendChild(square);
+                    }
+                }
+            }
+
+            // Manejar clic en casilla
+            function handleSquareClick(row, col) {
+                if (game.gameOver || (game.aiEnabled && game.turn === 'black')) return;
+                
+                const piece = game.board[row][col];
+                
+                // Si hay una pieza seleccionada y se hace clic en un movimiento válido
+                if (game.selectedPiece) {
+                    const isValidMove = game.validMoves.some(move => move.row === row && move.col === col);
+                    
+                    if (isValidMove) {
+                        movePiece(game.selectedPiece.row, game.selectedPiece.col, row, col);
+                        game.selectedPiece = null;
+                        game.validMoves = [];
+                        renderBoard();
+                        
+                        // Si la IA está activada y es el turno de las negras
+                        if (game.aiEnabled && game.turn === 'black' && !game.gameOver) {
+                            setTimeout(makeAIMove, 500);
+                        }
+                        return;
+                    }
+                }
+                
+                // Si no hay pieza seleccionada o se hace clic en una pieza del otro color
+                if (piece && ((piece === piece.toUpperCase() && game.turn === 'white') || 
+                              (piece !== piece.toUpperCase() && game.turn === 'black'))) {
+                    game.selectedPiece = { row, col };
+                    game.validMoves = getValidMoves(row, col);
+                    renderBoard();
+                }
+            }
+
+            // Movimiento de la IA (jugador negro)
+            function makeAIMove() {
+                if (game.gameOver || game.turn !== 'black') return;
+                
+                // Encontrar todas las piezas negras y sus movimientos posibles
+                const blackPieces = [];
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = game.board[row][col];
+                        if (piece && piece === piece.toLowerCase()) {
+                            const moves = getValidMoves(row, col);
+                            if (moves.length > 0) {
+                                blackPieces.push({ row, col, moves });
+                            }
+                        }
+                    }
+                }
+                
+                if (blackPieces.length === 0) return;
+                
+                // Seleccionar una pieza aleatoria con movimientos posibles
+                const randomPiece = blackPieces[Math.floor(Math.random() * blackPieces.length)];
+                const randomMove = randomPiece.moves[Math.floor(Math.random() * randomPiece.moves.length)];
+                
+                // Mover la pieza
+                movePiece(randomPiece.row, randomPiece.col, randomMove.row, randomMove.col);
+                renderBoard();
+            }
+
+            // Mover pieza
+            function movePiece(fromRow, fromCol, toRow, toCol) {
+                const piece = game.board[fromRow][fromCol];
+                game.board[toRow][toCol] = piece;
+                game.board[fromRow][fromCol] = '';
+                
+                // Cambiar turno
+                game.turn = game.turn === 'white' ? 'black' : 'white';
+                updateTurnIndicator();
+                
+                // Verificar jaque
+                game.check = isCheck();
+                if (game.check) {
+                    gameStatus.textContent = `Jaque al ${game.turn === 'white' ? 'rey negro' : 'rey blanco'}`;
+                } else {
+                    gameStatus.textContent = 'Juego en progreso';
+                }
+                
+                // Verificar jaque mate
+                if (isCheckmate()) {
+                    game.gameOver = true;
+                    gameStatus.textContent = `Jaque mate! ${game.turn === 'white' ? 'Negras' : 'Blancas'} ganan`;
+                }
+            }
+
+            // Obtener movimientos válidos
+            function getValidMoves(row, col) {
+                const piece = game.board[row][col];
+                if (!piece) return [];
+                
+                const moves = [];
+                const color = piece === piece.toUpperCase() ? 'white' : 'black';
+                const pieceType = piece.toLowerCase();
+                
+                switch (pieceType) {
+                    case 'p': // Peón
+                        const direction = color === 'white' ? -1 : 1;
+                        const startRow = color === 'white' ? 6 : 1;
+                        
+                        // Movimiento hacia adelante
+                        if (row + direction >= 0 && row + direction < 8 && game.board[row + direction][col] === '') {
+                            moves.push({ row: row + direction, col });
+                            
+                            // Primer movimiento (2 casillas)
+                            if (row === startRow && game.board[row + 2 * direction][col] === '') {
+                                moves.push({ row: row + 2 * direction, col });
+                            }
+                        }
+                        
+                        // Capturas
+                        for (const dc of [-1, 1]) {
+                            const newCol = col + dc;
+                            if (newCol >= 0 && newCol < 8 && row + direction >= 0 && row + direction < 8) {
+                                const target = game.board[row + direction][newCol];
+                                if (target && ((color === 'white' && target === target.toLowerCase()) || 
+                                                 (color === 'black' && target === target.toUpperCase()))) {
+                                    moves.push({ row: row + direction, col: newCol });
+                                }
+                            }
+                        }
+                        break;
+                        
+                    case 'r': // Torre
+                        addStraightMoves(moves, row, col, color);
+                        break;
+                        
+                    case 'n': // Caballo
+                        const knightMoves = [
+                            { dr: -2, dc: -1 }, { dr: -2, dc: 1 },
+                            { dr: -1, dc: -2 }, { dr: -1, dc: 2 },
+                            { dr: 1, dc: -2 }, { dr: 1, dc: 2 },
+                            { dr: 2, dc: -1 }, { dr: 2, dc: 1 }
+                        ];
+                        
+                        for (const move of knightMoves) {
+                            const newRow = row + move.dr;
+                            const newCol = col + move.dc;
+                            
+                            if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                                const target = game.board[newRow][newCol];
+                                if (!target || (color === 'white' && target === target.toLowerCase()) || 
+                                              (color === 'black' && target === target.toUpperCase())) {
+                                    moves.push({ row: newRow, col: newCol });
+                                }
+                            }
+                        }
+                        break;
+                        
+                    case 'b': // Alfil
+                        addDiagonalMoves(moves, row, col, color);
+                        break;
+                        
+                    case 'q': // Reina
+                        addStraightMoves(moves, row, col, color);
+                        addDiagonalMoves(moves, row, col, color);
+                        break;
+                        
+                    case 'k': // Rey
+                        for (let dr = -1; dr <= 1; dr++) {
+                            for (let dc = -1; dc <= 1; dc++) {
+                                if (dr === 0 && dc === 0) continue;
+                                
+                                const newRow = row + dr;
+                                const newCol = col + dc;
+                                
+                                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                                    const target = game.board[newRow][newCol];
+                                    if (!target || (color === 'white' && target === target.toLowerCase()) || 
+                                                  (color === 'black' && target === target.toUpperCase())) {
+                                        moves.push({ row: newRow, col: newCol });
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                }
+                
+                return moves;
+            }
+
+            // Añadir movimientos rectos (torre/reina)
+            function addStraightMoves(moves, row, col, color) {
+                const directions = [
+                    { dr: -1, dc: 0 }, // Arriba
+                    { dr: 1, dc: 0 },  // Abajo
+                    { dr: 0, dc: -1 }, // Izquierda
+                    { dr: 0, dc: 1 }   // Derecha
+                ];
+                
+                for (const dir of directions) {
+                    let newRow = row + dir.dr;
+                    let newCol = col + dir.dc;
+                    
+                    while (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        const target = game.board[newRow][newCol];
+                        
+                        if (!target) {
+                            moves.push({ row: newRow, col: newCol });
+                        } else {
+                            if ((color === 'white' && target === target.toLowerCase()) || 
+                                (color === 'black' && target === target.toUpperCase())) {
+                                moves.push({ row: newRow, col: newCol });
+                            }
+                            break;
+                        }
+                        
+                        newRow += dir.dr;
+                        newCol += dir.dc;
+                    }
+                }
+            }
+
+            // Añadir movimientos diagonales (alfil/reina)
+            function addDiagonalMoves(moves, row, col, color) {
+                const directions = [
+                    { dr: -1, dc: -1 }, // Arriba-izquierda
+                    { dr: -1, dc: 1 },  // Arriba-derecha
+                    { dr: 1, dc: -1 },   // Abajo-izquierda
+                    { dr: 1, dc: 1 }     // Abajo-derecha
+                ];
+                
+                for (const dir of directions) {
+                    let newRow = row + dir.dr;
+                    let newCol = col + dir.dc;
+                    
+                    while (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        const target = game.board[newRow][newCol];
+                        
+                        if (!target) {
+                            moves.push({ row: newRow, col: newCol });
+                        } else {
+                            if ((color === 'white' && target === target.toLowerCase()) || 
+                                (color === 'black' && target === target.toUpperCase())) {
+                                moves.push({ row: newRow, col: newCol });
+                            }
+                            break;
+                        }
+                        
+                        newRow += dir.dr;
+                        newCol += dir.dc;
+                    }
+                }
+            }
+
+            // Verificar jaque
+            function isCheck() {
+                let kingPos = null;
+                const king = game.turn === 'white' ? 'K' : 'k';
+                
+                // Encontrar la posición del rey
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        if (game.board[row][col] === king) {
+                            kingPos = { row, col };
+                            break;
+                        }
+                    }
+                    if (kingPos) break;
+                }
+                
+                if (!kingPos) return false;
+                
+                // Verificar si alguna pieza enemiga puede capturar al rey
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = game.board[row][col];
+                        if (piece && ((game.turn === 'white' && piece === piece.toLowerCase()) || 
+                                     (game.turn === 'black' && piece === piece.toUpperCase()))) {
+                            const moves = getValidMoves(row, col);
+                            if (moves.some(move => move.row === kingPos.row && move.col === kingPos.col)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                
+                return false;
+            }
+
+            // Verificar jaque mate
+            function isCheckmate() {
+                if (!isCheck()) return false;
+                
+                // Verificar si hay algún movimiento legal que salve al rey
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = game.board[row][col];
+                        if (piece && ((game.turn === 'white' && piece === piece.toUpperCase()) || 
+                                      (game.turn === 'black' && piece === piece.toLowerCase()))) {
+                            const moves = getValidMoves(row, col);
+                            
+                            // Probar cada movimiento para ver si elimina el jaque
+                            for (const move of moves) {
+                                const originalPiece = game.board[move.row][move.col];
+                                game.board[move.row][move.col] = game.board[row][col];
+                                game.board[row][col] = '';
+                                
+                                const stillInCheck = isCheck();
+                                
+                                // Deshacer el movimiento
+                                game.board[row][col] = game.board[move.row][move.col];
+                                game.board[move.row][move.col] = originalPiece;
+                                
+                                if (!stillInCheck) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return true;
+            }
+
+            // Actualizar indicador de turno
+            function updateTurnIndicator() {
+                turnIndicator.textContent = game.turn === 'white' ? 'Blancas' : 'Negras';
+                turnIndicator.style.color = game.turn === 'white' ? '#333' : '#000';
+            }
+
+            // Event listeners
+            resetBtn.addEventListener('click', initializeBoard);
+            
+            rulesBtn.addEventListener('click', () => {
+                rulesPanel.classList.toggle('show');
+                rulesBtn.textContent = rulesPanel.classList.contains('show') ? 'Ocultar Reglas' : 'Mostrar Reglas';
+            });
+
+            aiToggle.addEventListener('change', (e) => {
+                game.aiEnabled = e.target.checked;
+                if (game.aiEnabled && game.turn === 'black' && !game.gameOver) {
+                    makeAIMove();
+                }
+            });
+
+            // Inicializar el juego
+            initializeBoard();
+        });
+    </script>
+</body>
+</html>
